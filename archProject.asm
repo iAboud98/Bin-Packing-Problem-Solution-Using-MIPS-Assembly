@@ -14,6 +14,8 @@
     menu3_msg: .asciiz "\nP - Print result to output file\nQ/q - Quit\n"
     res_msg:   .asciiz "\nDone! Results saved in the output file.\n"
 	wrg_msg:   .asciiz "\nwrong input!"
+	first_msg: .asciiz "\nWelcome to first fit algorithms"
+	best_msg: .asciiz "\nWelcome to best fit algorithms"
 
 	#Read from user
 	file_path: .space 100		#100 bytes for file_path
@@ -43,7 +45,7 @@ menu1:
 	ori $t0,$t0,0x20 			#converte to small letter(0x20 = 32)
 	beq $t0,'q' quit			#compare between user input and 'q'
 	beq $t0,'a' input_file  	# compare between user input and 'a'
-	b invalid_choice
+	j invalid_choice			#jump to invalid choice label
 	
 quit:	 
 	la $a0, q_msg 			#load q_msg address to $a0 
@@ -74,35 +76,63 @@ remove_newline:
 	sb $zero, 0($t0)				#replace '/n' with '/0'
 	
 	#file_path address already in $a0
-	li $a1, 0				#0 --> read-only flag
-	li $v0, 13				#13 --> open file
+	li $a1, 0					#0 --> read-only flag
+	li $v0, 13					#13 --> open file
 	syscall
 	
-	bltz $v0, error_file	#branch to error_file if $v0 is negative
+	bltz $v0, error_file		#branch to error_file if $v0 is negative
 	
-	move $a0, $v0 			#move file descriptor from $v0 to $a0
-	la $a1, buffer			#load buffer address to $a1
-	li $a2, 1024			#load maximum number of characters to read to $a2
-	li $v0, 14				#14 --> Read File
+	move $a0, $v0 				#move file descriptor from $v0 to $a0
+	la $a1, buffer				#load buffer address to $a1
+	li $a2, 1024				#load maximum number of characters to read to $a2
+	li $v0, 14					#14 --> Read File
 	syscall
-	b q
+
+menu2:		#menu to choose algorithms
+	la $a0, menu2_msg 			#load menu2_msg address to $a0 
+	li $v0, 4					#4 --> Print String
+	syscall				
+
+	la $a0, choice_msg 			#load choice_msg address to $a0 
+	li $v0, 4					#4 --> Print String
+	syscall
+
+	li $v0,12					#12 --> Read Char
+	syscall
 	
+	move $t0, $v0				#move char in $v0 to $t0
+	ori $t0, $t0, 0x20			#converte to small letter(0x20 = 32)
+	beq $t0, 'f', first_fit		#compare between user input and 'f'
+	beq $t0, 'b', best_fit		#compare between user input and 'b'
+	beq $t0, 'q', quit			#compare between user input and 'q'
+	j invalid_choice			#jump to invalid choice label 
 	
 	
 error_file:   	#error opening file
 	la $a0, inv_msg			#load inv_msg address to $a0
 	li $v0, 4				#4 --> Print String
 	syscall
-	b menu1					#branch back to menu1
+	j menu1					#branch back to menu1
 
 invalid_choice:			#invalid character choice
 	la $a0, wrg_msg 		#load wrg_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
-	b menu1
+	j menu1
 	
 q:				#by fadi
 	la $a0, wlc_msg
 	li $v0, 4
 	syscall
+
+first_fit:
+	la $a0, first_msg
+	li $v0, 4
+	syscall
+	j quit
+best_fit:
+	la $a0, best_msg
+	li $v0, 4
+	syscall
+	j quit
 
