@@ -16,7 +16,8 @@
 	wrg_msg:   .asciiz "\nwrong input!"
 
 	#Read from user
-	file_path: .space 100
+	file_path: .space 100		#100 bytes for file_path
+	buffer: .space 1024  		#1024 for file content
 	
 ################################################### Code segment ########################################################################
 .text
@@ -38,18 +39,18 @@ menu1:
 	li $v0, 12				#12 --> Read Char
 	syscall 
 	
-	move $t0, $v0   		#move char in $v0 to $t0	
-	ori $t0,$t0,0x20 		#converte to small letter(0x20 = 32)
-	beq $t0,'q' quit		#compare between user input and 'q'
-	beq $t0,'a' input_file  # compare between user input and 'a'
-	b error
+	move $t0, $v0   			#move char in $v0 to $t0	
+	ori $t0,$t0,0x20 			#converte to small letter(0x20 = 32)
+	beq $t0,'q' quit			#compare between user input and 'q'
+	beq $t0,'a' input_file  	# compare between user input and 'a'
+	b invalid_choice
 	
 quit:	 
 	la $a0, q_msg 			#load q_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
 	
-	li	$v0, 10				#Exit program
+	li $v0, 10				#Exit program
 	syscall
 
 input_file:
@@ -62,10 +63,46 @@ input_file:
 	li $v0, 8				#8 --> Read String
 	syscall
 	
+	la $t0, file_path				#load file_path address to $t0
+get_newline_index:					#label to get the index of '/n'
+	lb $t1, 0($t0)					#load the char placed in address $t0 (first index of it) 
+	beq $t1, 0xA remove_newline		#compare the value of $t1 with '/n'
+	add $t0, $t0, 1					#increase $t0 by 1 (move to the next character)
+	j get_newline_index				#loop until '/n' is found
+
+remove_newline:
+	sb $zero, 0($t0)				#replace '/n' with '/0'
 	
-error:
+	#file_path address already in $a0
+	li $a1, 0				#0 --> read-only flag
+	li $v0, 13				#13 --> open file
+	syscall
+	
+	bltz $v0, error_file	#branch to error_file if $v0 is negative
+	
+	move $a0, $v0 			#move file descriptor from $v0 to $a0
+	la $a1, buffer			#load buffer address to $a1
+	li $a2, 1024			#load maximum number of characters to read to $a2
+	li $v0, 14				#14 --> Read File
+	syscall
+	b q
+	
+	
+	
+error_file:   	#error opening file
+	la $a0, inv_msg			#load inv_msg address to $a0
+	li $v0, 4				#4 --> Print String
+	syscall
+	b menu1					#branch back to menu1
+
+invalid_choice:			#invalid character choice
 	la $a0, wrg_msg 		#load wrg_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
 	b menu1
+	
+q:				#by fadi
+	la $a0, wlc_msg
+	li $v0, 4
+	syscall
 
