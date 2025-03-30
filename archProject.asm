@@ -25,6 +25,8 @@
 	.align 2
 	items_list: .space 1024 		#array of items
 	bins_size_list: .space 1024 	#array of bins (holds bins size)
+
+	one_float: .float 1.0
 	
 ################################################### Code segment ########################################################################
 .text
@@ -185,10 +187,10 @@ first_fit:
 	
 	la $t0, items_list			#items_list pointer
 	la $t1, bins_size_list		#bins_size_list pointer
-	li $t2, 1                 	#bins counter 
+	li $t2, 0                 	#bins counter 
 	
-	mtc1 $t2, $f0     			#make $f0 = 1.0
-	swc1 $f0, 0($t1) 			#initialize first bin size to 1.0
+	l.s $f6, one_float    # This loads 1.0 into $f0
+    swc1 $f6, 0($t1)      # Store $f0 into memory at address in $t1
 
 check_bin:
     lwc1 $f0, 0($t0)
@@ -210,9 +212,8 @@ add_item:
 
 create_bin:
 	addi $t1, $t1, 4
-	li $t3, 1
-	mtc1 $t3, $f4     			#make $f4 = 1.0
-	swc1 $f4, 0($t1) 			#initialize new bin size to 1.0
+	l.s $f6, one_float    # This loads 1.0 into $f0
+    swc1 $f6, 0($t1)      # Store $f0 into memory at address in $t1
 	addi $t2, $t2, 1
 	j check_bin
 	
