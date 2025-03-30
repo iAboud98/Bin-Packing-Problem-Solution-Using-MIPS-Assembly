@@ -23,8 +23,8 @@
 	
 	#Array
 	.align 2
-	items_list: .space 1024 	#array of items
-
+	items_list: .space 1024 		#array of items
+	bins_size_list: .space 1024 	#array of bins (holds bins size)
 	
 ################################################### Code segment ########################################################################
 .text
@@ -128,22 +128,21 @@ power:
     j power           				#repeat loop
 
 continue_to_float:
-    mtc1 $t2, $f1     		#move integer value in $t2 to floating-point register $f0
-    cvt.s.w $f1, $f1  		#convert integer to float
+    mtc1 $t2, $f0     		#move integer value in $t2 to floating-point register $f0
+    cvt.s.w $f0, $f0  		#convert integer to float
 
-    mtc1 $t7, $f3			#move 10^t4 value to floating-point register $f2
-    cvt.s.w $f3, $f3  		#convert integer to float
+    mtc1 $t7, $f2			#move 10^t4 value to floating-point register $f2
+    cvt.s.w $f2, $f2  		#convert integer to float
 
-    div.s $f1, $f1, $f3 	#xy/10^2 (for example) =0.xy 
+    div.s $f0, $f0, $f2 	#xy/10^2 (for example) =0.xy 
 	
 	 
-	swc1 $f1,0($t8)			#store float number from $f1 to memory (items_list) 
+	swc1 $f0,0($t8)			#store float number from $f1 to memory (items_list) 
     addi $t8, $t8, 4		#increment the address by 4 (next index) 
 	lb $t6, 0($t0)			#load the character from memory (buffer) to $t6
-	beq $t6, 0 , quit		#check if we reached the new line ('\n')
+	beq $t6, 0 , menu2		#check if we reached end of file ('/0')
 	addi $t0, $t0, 1		#increment the address by 1 (next character)
 	j repeat				#repeat loop
-    j quit
 
 
 menu2:							#menu to choose algorithms
@@ -178,15 +177,48 @@ invalid_choice:			#invalid character choice
 	syscall
 	j menu1
 	
-q:				#by fadi
-	la $a0, wlc_msg
-	li $v0, 4
-	syscall
-
 first_fit:
 	la $a0, first_msg
 	li $v0, 4
 	syscall
+	
+	
+	la $t0, items_list			#items_list pointer
+	la $t1, bins_size_list		#bins_size_list pointer
+	li $t2, 1                 	#bins counter 
+	
+	mtc1 $t2, $f0     			#make $f0 = 1.0
+	swc1 $f0, 0($t1) 			#initialize first bin size to 1.0
+
+check_bin:
+    lwc1 $f0, 0($t0)
+    lwc1 $f2, 0($t1)
+
+    c.le.s $f0, $f2     # Compare if $f0 <= $f2 and make flag cc to 0
+    bc1t add_item       # If true (cc = 0), branch to add_item
+    lb $t8, 0($t0)  	#ERROR IS HERE BITCH
+    beq $t8, 0, quit
+    j create_bin        # Else, jump to create_bin
+	
+
+add_item:
+	sub.s $f2, $f2, $f0  		#$f2 = $f2 - $f0
+	swc1 $f2, 0($t1)
+	#add item index to bins_list
+	addi $t0, $t0, 4
+	j check_bin
+
+create_bin:
+	addi $t1, $t1, 4
+	li $t3, 1
+	mtc1 $t3, $f4     			#make $f4 = 1.0
+	swc1 $f4, 0($t1) 			#initialize new bin size to 1.0
+	addi $t2, $t2, 1
+	j check_bin
+	
+	
+	
+	
 	j quit
 best_fit:
 	la $a0, best_msg
