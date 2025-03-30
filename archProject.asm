@@ -21,6 +21,8 @@
 	file_path: .space 100		#100 bytes for file_path
 	buffer: .space 1024  		#1024 for file content
 	
+	
+	
 ################################################### Code segment ########################################################################
 .text
 .globl main
@@ -83,13 +85,59 @@ remove_newline:
 	bltz $v0, error_file		#branch to error_file if $v0 is negative
 	
 	move $a0, $v0 				#move file descriptor from $v0 to $a0
+	
 	la $a1, buffer				#load buffer address to $a1
 	li $a2, 1024				#load maximum number of characters to read to $a2
 	li $v0, 14					#14 --> Read File
 	syscall
+	
+	li $t2, 0    		#number after the decimal
+	li $t3, 48			#'0' in ASCII
+	li $t4, 0			#number counter
+	
+	la $t0, buffer
+	lb $t1, 0($t0) 		#load the first byte (number) in ASCII
+	#handle error (possible!!!)
+	addi $t0, $t0, 2			#skip '.'
+	
+	# 0.982/n    #1.0/n
+convert_to_int:
+	lb $t6, 0($t0) 		#$t6 holds numbers in ASCII form
+	beq $t6, 0xA, convert_to_float		#compare with '/n'
+	beq $t6, 0, convert_to_float		#compare with '/0'
+	
+	sub $t6, $t6, $t3					#convert from ASCII to real integer
+	mul $t2, $t2,10						#multiply $t2 by 10
+	add  $t2, $t6, $t2					#accomulate the number in $t2
+	addi $t0, $t0, 1					#move to the next digit
+	addi $t4, $t4, 1					#accomulate counter (digit counter)
+	j convert_to_int					#repeat loop
+	
+	#982
+convert_to_float:
+    li $t7, 1        #initialize power accumulator (10^t4)
+power:
+    beqz $t4, continue_to_float 	#if exponent is 0, move to float conversion
+    mul $t7, $t7, 10  				#multiply $t7 by 10
+    sub $t4, $t4, 1  				#decrease by 1
+    j power           				#repeat loop
 
-menu2:		#menu to choose algorithms
-	la $a0, menu2_msg 			#load menu2_msg address to $a0 
+continue_to_float:
+    mtc1 $t2, $f0     		#move integer value in $t2 to floating-point register $f0
+    cvt.s.w $f0, $f0  		#convert integer to float
+
+    mtc1 $t7, $f2			#move 10^t4 value to floating-point register $f2
+    cvt.s.w $f2, $f2  		#convert integer to float
+
+    div.s $f0, $f0, $f2 	# -> 0.982
+    
+    j quit
+
+	
+	
+
+menu2:							#menu to choose algorithms
+	la $a0, menu2_msg 			#load menu2_msg address to $a0
 	li $v0, 4					#4 --> Print String
 	syscall				
 
@@ -135,4 +183,3 @@ best_fit:
 	li $v0, 4
 	syscall
 	j quit
-
