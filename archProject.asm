@@ -21,7 +21,10 @@
 	file_path: .space 100		#100 bytes for file_path
 	buffer: .space 1024  		#1024 for file content
 	
-	
+	#Array
+	.align 2
+	items_list: .space 1024 	#array of items
+
 	
 ################################################### Code segment ########################################################################
 .text
@@ -90,24 +93,26 @@ remove_newline:
 	li $a2, 1024				#load maximum number of characters to read to $a2
 	li $v0, 14					#14 --> Read File
 	syscall
-	
+	la $t0, buffer				#load address to $t0
+	la $t8, items_list			#load address to $t8
+repeat:	
 	li $t2, 0    		#number after the decimal
 	li $t3, 48			#'0' in ASCII
 	li $t4, 0			#number counter
 	
-	la $t0, buffer
+	
 	lb $t1, 0($t0) 		#load the first byte (number) in ASCII
 	#handle error (possible!!!)
 	addi $t0, $t0, 2			#skip '.'
 	
-	# 0.982/n    #1.0/n
+	
 convert_to_int:
 	lb $t6, 0($t0) 		#$t6 holds numbers in ASCII form
 	beq $t6, 0xA, convert_to_float		#compare with '/n'
 	beq $t6, 0, convert_to_float		#compare with '/0'
 	
 	sub $t6, $t6, $t3					#convert from ASCII to real integer
-	mul $t2, $t2,10						#multiply $t2 by 10
+	mulu $t2, $t2,10						#multiply $t2 by 10
 	add  $t2, $t6, $t2					#accomulate the number in $t2
 	addi $t0, $t0, 1					#move to the next digit
 	addi $t4, $t4, 1					#accomulate counter (digit counter)
@@ -118,23 +123,28 @@ convert_to_float:
     li $t7, 1        #initialize power accumulator (10^t4)
 power:
     beqz $t4, continue_to_float 	#if exponent is 0, move to float conversion
-    mul $t7, $t7, 10  				#multiply $t7 by 10
+    mulu $t7, $t7, 10  				#multiply $t7 by 10
     sub $t4, $t4, 1  				#decrease by 1
     j power           				#repeat loop
 
 continue_to_float:
-    mtc1 $t2, $f0     		#move integer value in $t2 to floating-point register $f0
-    cvt.s.w $f0, $f0  		#convert integer to float
+    mtc1 $t2, $f1     		#move integer value in $t2 to floating-point register $f0
+    cvt.s.w $f1, $f1  		#convert integer to float
 
-    mtc1 $t7, $f2			#move 10^t4 value to floating-point register $f2
-    cvt.s.w $f2, $f2  		#convert integer to float
+    mtc1 $t7, $f3			#move 10^t4 value to floating-point register $f2
+    cvt.s.w $f3, $f3  		#convert integer to float
 
-    div.s $f0, $f0, $f2 	# -> 0.982
-    
+    div.s $f1, $f1, $f3 	#xy/10^2 (for example) =0.xy 
+	
+	 
+	swc1 $f1,0($t8)			#store float number from $f1 to memory (items_list) 
+    addi $t8, $t8, 4		#increment the address by 4 (next index) 
+	lb $t6, 0($t0)			#load the character from memory (buffer) to $t6
+	beq $t6, 0 , quit		#check if we reached the new line ('\n')
+	addi $t0, $t0, 1		#increment the address by 1 (next character)
+	j repeat				#repeat loop
     j quit
 
-	
-	
 
 menu2:							#menu to choose algorithms
 	la $a0, menu2_msg 			#load menu2_msg address to $a0
