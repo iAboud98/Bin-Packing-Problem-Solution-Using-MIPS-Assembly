@@ -55,8 +55,8 @@ menu1:
 	
 	move $t0, $v0   			#move char in $v0 to $t0	
 	ori $t0,$t0,0x20 			#converte to small letter(0x20 = 32)
-	beq $t0,'q' quit			#compare between user input and 'q'
-	beq $t0,'a' input_file  	# compare between user input and 'a'
+	beq $t0,'q', quit			#compare between user input and 'q'
+	beq $t0,'a', input_file  	# compare between user input and 'a'
 	j invalid_choice			#jump to invalid choice label
 	
 quit:	 
@@ -109,7 +109,7 @@ repeat:
 	
 	
 	lb $t1, 0($t0) 		#load the first byte (number) in ASCII
-	#handle error (possible!!!)
+	#handle error (possible!!!!!!!!!!!!!!!!!!!!!!!1)
 	addi $t0, $t0, 2			#skip '.'
 	
 	
@@ -170,6 +170,25 @@ menu2:							#menu to choose algorithms
 	beq $t0, 'b', best_fit		#compare between user input and 'b'
 	beq $t0, 'q', quit			#compare between user input and 'q'
 	j invalid_choice			#jump to invalid choice label 
+
+menu3:
+	la $a0,menu3_msg 		#load menu3_msg address to $a0 
+	li $v0, 4 				#4 --> Print String
+	syscall
+
+	la $a0,choice_msg 		#load choice_msg address to $a0 
+	li $v0, 4 				#4 --> Print String
+	syscall
+
+	li $v0, 12				#12 --> Read Char
+	syscall 
+	
+	move $t0, $v0   			#move char in $v0 to $t0	
+	ori $t0,$t0,0x20 			#converte to small letter(0x20 = 32)
+	beq $t0,'q', quit			#compare between user input and 'q'
+	beq $t0,'p', write_on_file  # compare between user input and 'p'
+	j invalid_choice			#jump to invalid choice label
+	#ask about repeat everything or just menu3???????????????????
 	
 	
 error_file:   	#error opening file
@@ -207,7 +226,7 @@ first_fit:
 check_bin:
 	
 	lw $t8, 0($t0)				#Check end of file
-	beq $t8, 0, quit			#branch to MENU3
+	beq $t8, 0, menu3			#branch to MENU3
 	
     lwc1 $f0, 0($t0)			#load item size into $f0
     lwc1 $f2, 0($t1)			#load bin size into $f2
@@ -267,6 +286,12 @@ found_index:
  	jr $ra 						#return
 
 best_fit:
+	la $a0, best_msg
+	li $v0, 4
+	syscall
+	j quit
+
+write_on_file:
 	la $a0, best_msg
 	li $v0, 4
 	syscall
