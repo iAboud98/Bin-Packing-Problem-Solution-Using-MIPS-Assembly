@@ -19,18 +19,18 @@
 	
 	#Output File
 	out_filename:      .asciiz "output.txt"
-	header_line1:      .asciiz "\n===========================================\n"
-	header_title:      .asciiz "        Bin Packing Results Report         \n"
-	header_line2:      .asciiz "===========================================\n\n"
-	algorithm_label:   .asciiz ">> Algorithm Used for Bin Packing	: \n"
+	header_line1:      .ascii "============================================\n"
+	header_title:      .ascii "        Bin Packing Results Report         \n"
+	header_line2:      .ascii "===========================================\n\n"
+	algorithm_label:   .ascii ">> Algorithm Used for Bin Packing	: \n"
 #	algorithm_name:    .asciiz "First Fit\n"
-	bins_label:        .asciiz "> Minimum Number of Required Bins	: "
-	bin_title:         .asciiz "\n══════════════════════════════════════════════════\n"
-	bin_prefix:        .asciiz "Bin "
-	item_format_part1: .asciiz "   | Item #"
-	item_format_part2: .asciiz " | Size = "
-	item_format_end:   .asciiz " |\n"
-	end_msg:           .asciiz "\nPacking Completed Successfully!\n"
+	bins_label:        .ascii ">> Minimum Number of Required Bins	: \n"
+	bins_line:  		.ascii "____________________________________________\n"
+	bin_prefix:        .ascii "\n Bin \n"
+	item_format_part1: .ascii "   | Item #"
+	item_format_part2: .ascii " | Size = "
+	item_format_end:   .ascii " |\n"
+	end_msg:           .ascii "\nPacking Completed Successfully!\n"
 #	output_buffer:		.space 4096
 	
 
@@ -317,73 +317,81 @@ write_on_file:
 	
 	bltz $v0, error_file		#branch to error_file if $v0 is negative
 	move $s3, $v0
-	
+
 	move $a0, $s3
 	la $a1, header_line1
-	li $a2, 128
+	li $a2, 46
 	li $v0, 15
 	syscall
-	
-	
+
 	move $a0, $s3
 	la $a1, header_title
-	li $a2, 128
+	li $a2, 45
 	li $v0, 15
 	syscall
-	
+
 	move $a0, $s3
 	la $a1, header_line2
-	li $a2, 128
+	li $a2, 45
 	li $v0, 15
 	syscall
-	
+
 	move $a0, $s3
 	la $a1, algorithm_label
-	li $a2, 128
+	li $a2, 37
 	li $v0, 15
 	syscall
-	
+
 	move $a0, $s3
 	la $a1, bins_label
-	li $a2, 128
+	li $a2, 38
 	li $v0, 15
 	syscall
+
 	
 	move $a0, $s3
-	la $a1, bin_title
-	li $a2, 128
+	la $a1, bins_line
+	li $a2, 45
 	li $v0, 15
 	syscall
-	
+
 	move $a0, $s3
 	la $a1, bin_prefix
-	li $a2, 128
+	li $a2, 7
 	li $v0, 15
 	syscall
+
 	
 	move $a0, $s3
 	la $a1, item_format_part1
-	li $a2, 128
+	li $a2, 11
 	li $v0, 15
 	syscall
 	
 	move $a0, $s3
 	la $a1, item_format_part2
-	li $a2, 128
+	li $a2, 10
 	li $v0, 15
 	syscall
 	
 	move $a0, $s3
 	la $a1, item_format_end
-	li $a2, 128
+	li $a2, 3
 	li $v0, 15
 	syscall
 	
 	move $a0, $s3
-	la $a1, end_msg
-	li $a2, 128
+	la $a1, bins_line
+	li $a2, 45
 	li $v0, 15
 	syscall
-	
+
+	move $a0, $s3
+	la $a1, end_msg
+	li $a2, 26
+	li $v0, 15
+	syscall
+
+
 	
 	j quit
