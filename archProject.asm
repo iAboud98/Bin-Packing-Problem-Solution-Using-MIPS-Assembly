@@ -4,29 +4,34 @@
 ###################################################### data #############################################################################
 .data
     # Print on screen
-    wlc_msg:   .asciiz "Welcome to Aboud and Fadi's Program\n"
-    menu1_msg: .asciiz "\nA - Read input file\nQ/q - Quit\n"
-    choice_msg:.asciiz "\nChoose an operation: "
-    infile_msg:.asciiz "\nEnter input file path (e.g., input.txt or C:\\Users\\YourName\\Documents\\input.txt): "
-    q_msg:     .asciiz "\nThank you for using our program!\n"
-    inv_msg:   .asciiz "\nError opening the file. Please check if the path is correct.\n"
-    menu2_msg: .asciiz "\nF - First Fit\nB - Best Fit\nQ/q - Quit\n"
-    menu3_msg: .asciiz "\nP - Print result to output file\nQ/q - Quit\n"
-    res_msg:   .asciiz "\nDone! Results saved in the output file.\n"
-	wrg_msg:   .asciiz "\nwrong input!"
-	first_msg: .asciiz "\nWelcome to first fit algorithms"
-	best_msg: .asciiz "\nWelcome to best fit algorithms"
+    wlc_msg:   .asciiz 	"Welcome to Aboud and Fadi's Program\n"
+    menu1_msg: .asciiz 	"\nA - Read input file\nQ/q - Quit\n"
+    choice_msg:.asciiz 	"\nChoose an operation: "
+    infile_msg:.asciiz 	"\nEnter input file path (e.g., input.txt or C:\\Users\\YourName\\Documents\\input.txt): "
+    q_msg:     .asciiz 	"\nThank you for using our program!\n"
+    inv_msg:   .asciiz 	"\nError opening the file. Please check if the path is correct.\n"
+    menu2_msg: .asciiz 	"\nF - First Fit\nB - Best Fit\nQ/q - Quit\n"
+    menu3_msg: .asciiz 	"\nP - Print result to output file\nQ/q - Quit\n"
+    res_msg:   .asciiz 	"\nDone! Results saved in the output file.\n"
+	wrg_msg:   .asciiz 	"\nwrong input!"
+	first_msg: .asciiz 	"\nWelcome to first fit algorithms"
+	best_msg: .asciiz 	"\nWelcome to best fit algorithms"
 
 	#Read from user
 	file_path: .space 100		#100 bytes for file_path
 	buffer: .space 1024  		#1024 for file content
 	
-	#Array
+	#Constants
+	one_float: .float 1.0
+	
+	#Arrays
 	.align 2
 	items_list: .space 1024 		#array of items
 	bins_size_list: .space 1024 	#array of bins (holds bins size)
 
-	one_float: .float 1.0
+	bins_list: .space 40000  		#2D array of bins (holds items indices for each bin) 
+									#offset = (row * 100 + col) * 4 
+									#100 x 100 x 4 bytes = 40,000 bytes
 	
 ################################################### Code segment ########################################################################
 .text
@@ -114,13 +119,13 @@ convert_to_int:
 	beq $t6, 0, convert_to_float		#compare with '/0'
 	
 	sub $t6, $t6, $t3					#convert from ASCII to real integer
-	mulu $t2, $t2,10						#multiply $t2 by 10
+	mulu $t2, $t2,10					#multiply $t2 by 10
 	add  $t2, $t6, $t2					#accomulate the number in $t2
 	addi $t0, $t0, 1					#move to the next digit
 	addi $t4, $t4, 1					#accomulate counter (digit counter)
 	j convert_to_int					#repeat loop
 	
-	#982
+	
 convert_to_float:
     li $t7, 1        #initialize power accumulator (10^t4)
 power:
@@ -185,42 +190,82 @@ first_fit:
 	syscall
 	
 	
-	la $t0, items_list			#items_list pointer
-	la $t1, bins_size_list		#bins_size_list pointer
-	li $t2, 0                 	#bins counter 
+	la $t0, items_list			#$t0 --> items_list pointer
+	la $t1, bins_size_list		#$t1 --> bins_size_list pointer
+	li $t3, 1                 	#$t3 --> bins counter
+	li $t4, 1					#$t4 --> current index of items
+	li $t5, 0					#$t5 --> current index of bins
 	
-	l.s $f6, one_float    # This loads 1.0 into $f0
-    swc1 $f6, 0($t1)      # Store $f0 into memory at address in $t1
+	move $s0, $t0				#$s0 --> address of first item index
+	move $s1, $t1				#$s1 --> address of first bin index
+	la $s2, bins_list			#$s2 --> bins_list pointer
+	
+	l.s $f6, one_float    		#This loads 1.0 into $f0
+    swc1 $f6, 0($t1)      		#Store $f6 into memory at address in $t1
+    					
 
 check_bin:
-    lwc1 $f0, 0($t0)
-    lwc1 $f2, 0($t1)
-
-    c.le.s $f0, $f2     # Compare if $f0 <= $f2 and make flag cc to 0
-    bc1t add_item       # If true (cc = 0), branch to add_item
-    lb $t8, 0($t0)  	#ERROR IS HERE BITCH
-    beq $t8, 0, quit
-    j create_bin        # Else, jump to create_bin
 	
-
+	lw $t8, 0($t0)				#Check end of file
+	beq $t8, 0, quit			#branch to MENU3
+	
+    lwc1 $f0, 0($t0)			#load item size into $f0
+    lwc1 $f2, 0($t1)			#load bin size into $f2
+	
+    c.le.s $f0, $f2     		#Compare if $f0 <= $f2 and make flag cc to 0
+    bc1t add_item      	 		#If true (cc = 0), branch to add_item
+    
+    addi $t1, $t1, 4			#move to the next bin
+    lw $t7, 0($t1)				
+    beq $t7, 0, create_bin		#create new bin if $t7 == '/0'
+    j check_bin
+    	
 add_item:
+	
 	sub.s $f2, $f2, $f0  		#$f2 = $f2 - $f0
 	swc1 $f2, 0($t1)
-	#add item index to bins_list
-	addi $t0, $t0, 4
+	
+	sub $t4, $t0, $s0			#$t4 --> index of current item (multiple by 4)
+	divu $t4, $t4, 4			#divide $t4 by 4 to get the real index
+	addi $t4, $t4,1
+	#add to bins_list
+	jal add_item_to_bin_list	
+	
+	addi $t0, $t0, 4			#move to the next item 
+	
+	move $t1, $s1				#reset to the first bin 
+	
 	j check_bin
 
 create_bin:
-	addi $t1, $t1, 4
-	l.s $f6, one_float    # This loads 1.0 into $f0
-    swc1 $f6, 0($t1)      # Store $f0 into memory at address in $t1
-	addi $t2, $t2, 1
+	
+	sub $t5, $t1, $s1			#$t5 --> index of current item (multiple by 4)
+	divu $t5, $t5, 4			#divide $t5 by 4 to get the real index
+	
+	l.s $f6, one_float    		#This loads 1.0 into $f0
+    swc1 $f6, 0($t1)      		#Store $f0 into memory at address in $t1 (the new bin)
+
+	addi $t3, $t3, 1			#increament bins counter by 1
+	
 	j check_bin
-	
-	
-	
-	
-	j quit
+
+add_item_to_bin_list:
+	#get offset equation
+	#get the address of the bin index 
+	mul $t7, $t5, 100			
+	mul $t7, $t7, 4  
+	add $t2, $s2,$t7
+
+	#get the address of empty column
+find_index:
+	lb $t9, 0($t2)				
+	beq $t9, 0, found_index		#check if index is empty
+	add $t2, $t2, 4				#if not empty move to next index
+	j find_index
+found_index:
+	sb $t4, 0($t2)				#srote the index of item in bin_list
+ 	jr $ra 						#return
+
 best_fit:
 	la $a0, best_msg
 	li $v0, 4
