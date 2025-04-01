@@ -1,5 +1,5 @@
-#Fadi Bassous 1221005
-#Abedalrheem Fialah 1220216
+#Fadi Bassous			ID: 1221005			section: 2
+#Abedalrheem Fialah		ID: 1220216			section: 3
 
 ###################################################### data #############################################################################
 .data
@@ -16,6 +16,23 @@
 	wrg_msg:   .asciiz 	"\nwrong input!"
 	first_msg: .asciiz 	"\nWelcome to first fit algorithms"
 	best_msg: .asciiz 	"\nWelcome to best fit algorithms"
+	
+	#Output File
+	out_filename:      .asciiz "output.txt"
+	header_line1:      .asciiz "\n===========================================\n"
+	header_title:      .asciiz "        Bin Packing Results Report         \n"
+	header_line2:      .asciiz "===========================================\n\n"
+	algorithm_label:   .asciiz ">> Algorithm Used for Bin Packing	: \n"
+#	algorithm_name:    .asciiz "First Fit\n"
+	bins_label:        .asciiz "> Minimum Number of Required Bins	: "
+	bin_title:         .asciiz "\n══════════════════════════════════════════════════\n"
+	bin_prefix:        .asciiz "Bin "
+	item_format_part1: .asciiz "   | Item #"
+	item_format_part2: .asciiz " | Size = "
+	item_format_end:   .asciiz " |\n"
+	end_msg:           .asciiz "\nPacking Completed Successfully!\n"
+#	output_buffer:		.space 4096
+	
 
 	#Read from user
 	file_path: .space 100		#100 bytes for file_path
@@ -270,7 +287,7 @@ create_bin:
 
 add_item_to_bin_list:
 	#get offset equation
-	#get the address of the bin index 
+	#get the address of the bin index
 	mul $t7, $t5, 100			
 	mul $t7, $t7, 4  
 	add $t2, $s2,$t7
@@ -292,7 +309,81 @@ best_fit:
 	j quit
 
 write_on_file:
-	la $a0, best_msg
-	li $v0, 4
+	
+	la $a0, out_filename
+	la $a1, 1
+	li $v0, 13
 	syscall
+	
+	bltz $v0, error_file		#branch to error_file if $v0 is negative
+	move $s3, $v0
+	
+	move $a0, $s3
+	la $a1, header_line1
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	
+	move $a0, $s3
+	la $a1, header_title
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, header_line2
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, algorithm_label
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, bins_label
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, bin_title
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, bin_prefix
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, item_format_part1
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, item_format_part2
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, item_format_end
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	move $a0, $s3
+	la $a1, end_msg
+	li $a2, 128
+	li $v0, 15
+	syscall
+	
+	
 	j quit
