@@ -18,20 +18,27 @@
 	best_msg: .asciiz 	"\nWelcome to best fit algorithms"
 	
 	#Output File
-	out_filename:      .asciiz "output.txt"
-	header_line1:      .ascii "============================================\n"
-	header_title:      .ascii "        Bin Packing Results Report         \n"
-	header_line2:      .ascii "===========================================\n\n"
-	algorithm_label:   .ascii ">> Algorithm Used for Bin Packing	: \n"
-#	algorithm_name:    .asciiz "First Fit\n"
-	bins_label:        .ascii ">> Minimum Number of Required Bins	: \n"
-	bins_line:  		.ascii "____________________________________________\n"
-	bin_prefix:        .ascii "\n Bin \n"
-	item_format_part1: .ascii "   | Item #"
-	item_format_part2: .ascii " | Size = "
-	item_format_end:   .ascii " |\n"
-	end_msg:           .ascii "\nPacking Completed Successfully!\n"
-#	output_buffer:		.space 4096
+	out_filename:      	.asciiz "output.txt"
+	header_line1:      	.ascii "============================================\n"
+	header_title:      	.ascii "        Bin Packing Results Report         \n"
+	header_line2:      	.ascii "===========================================\n\n"
+	algorithm_label:   	.ascii ">> Algorithm Used for Bin Packing	: "
+	FF:					.ascii "First Fit\n"
+	BF:					.ascii "Best Fit \n"
+	bins_label:			.ascii ">> Minimum Number of Required Bins	: "
+	bins_line:  		.ascii "\n____________________________________________"
+	bin_prefix:        	.ascii "\n\n Bin "
+	item_format_part1: 	.ascii "\n   | Item #"
+	item_format_part2: 	.ascii " | Size = "
+	item_format_end:   	.ascii " |\n"
+	end_msg:           	.ascii "\nPacking Completed Successfully!\n"
+
+	.align 2
+	bins_count:			.space 64
+	bins_index:			.space 64
+	ascii_item_index:	.space 64
+
+	
 	
 
 	#Read from user
@@ -225,10 +232,11 @@ first_fit:
 	li $v0, 4
 	syscall
 	
-	
+	la $s5, FF	
+
 	la $t0, items_list			#$t0 --> items_list pointer
 	la $t1, bins_size_list		#$t1 --> bins_size_list pointer
-	li $t3, 1                 	#$t3 --> bins counter
+	li $s4, 1                 	#$t3 --> bins counter
 	li $t4, 1					#$t4 --> current index of items
 	li $t5, 0					#$t5 --> current index of bins
 	
@@ -281,7 +289,7 @@ create_bin:
 	l.s $f6, one_float    		#This loads 1.0 into $f0
     swc1 $f6, 0($t1)      		#Store $f0 into memory at address in $t1 (the new bin)
 
-	addi $t3, $t3, 1			#increament bins counter by 1
+	addi $s4, $s4, 1			#increament bins counter by 1
 	
 	j check_bin
 
@@ -299,18 +307,21 @@ find_index:
 	add $t2, $t2, 4				#if not empty move to next index
 	j find_index
 found_index:
-	sb $t4, 0($t2)				#srote the index of item in bin_list
+	sb $t4, 0($t2)				#store the index of item in bin_list
  	jr $ra 						#return
 
 best_fit:
 	la $a0, best_msg
 	li $v0, 4
 	syscall
-	j quit
+
+	la $s5, BF
+
+	j menu3
 
 write_on_file:
 	
-	la $a0, out_filename
+	la $a0, out_filename		#open file
 	la $a1, 1
 	li $v0, 13
 	syscall
@@ -318,80 +329,133 @@ write_on_file:
 	bltz $v0, error_file		#branch to error_file if $v0 is negative
 	move $s3, $v0
 
-	move $a0, $s3
-	la $a1, header_line1
-	li $a2, 46
-	li $v0, 15
+	move $a0, $s3				#print header_line1 on file
+	la $a1, header_line1		#load header_line1 address onto $a1
+	li $a2, 46					#$a2 --> size of header_line1
+	li $v0, 15					
 	syscall
 
-	move $a0, $s3
-	la $a1, header_title
-	li $a2, 45
-	li $v0, 15
+	move $a0, $s3				#print header_title on file
+	la $a1, header_title		#load header_title address onto $a1
+	li $a2, 45					#$a2 --> size of header_title
+	li $v0, 15				
 	syscall
 
-	move $a0, $s3
-	la $a1, header_line2
-	li $a2, 45
-	li $v0, 15
+	move $a0, $s3				#print header_line2 on file
+	la $a1, header_line2		#load header_line2 address onto $a1
+	li $a2, 45					#$a2 --> size of header_line2
+	li $v0, 15					#write on file
 	syscall
 
-	move $a0, $s3
-	la $a1, algorithm_label
-	li $a2, 37
-	li $v0, 15
+	move $a0, $s3				#print algorithm_label on file
+	la $a1, algorithm_label		#load algorithm_label address onto $a1
+	li $a2, 36					#$a2 --> size of algorithm_label
+	li $v0, 15					
 	syscall
 
-	move $a0, $s3
-	la $a1, bins_label
-	li $a2, 38
-	li $v0, 15
+	move $a0, $s3				#print algorithm name (BF OR FF) on file
+	la $a1, 0($s5)				#load address saved in $s5 (BF OR FF)
+	li $a2, 10					#$a2 --> size of algorithm name
+	li $v0, 15					
 	syscall
 
-	
-	move $a0, $s3
-	la $a1, bins_line
-	li $a2, 45
-	li $v0, 15
-	syscall
-
-	move $a0, $s3
-	la $a1, bin_prefix
-	li $a2, 7
-	li $v0, 15
-	syscall
-
-	
-	move $a0, $s3
-	la $a1, item_format_part1
-	li $a2, 11
-	li $v0, 15
+	move $a0, $s3				#print bins_label on file
+	la $a1, bins_label			#load bins_label address onto $a1
+	li $a2, 37					#$a2 --> size of bins_label
+	li $v0, 15					
 	syscall
 	
-	move $a0, $s3
-	la $a1, item_format_part2
-	li $a2, 10
-	li $v0, 15
+	move $t1, $s4				#now $t1 holds count of bins
+
+	addi $s4, $s4, 48			#convert count of bins from integer to ASCII (+48)
+	sw $s4, bins_count			#store it in memory
+	
+	move $a0, $s3				#print bins_count on file
+	la $a1, bins_count			#load bins_count address onto $a1
+	li $a2, 2					#$a2 --> size of bins_count
+	li $v0, 15					#write on file
 	syscall
 	
-	move $a0, $s3
-	la $a1, item_format_end
-	li $a2, 3
-	li $v0, 15
+	move $a0, $s3				#print bins_line on file
+	la $a1, bins_line			#load bins_line address onto $a1
+	li $a2, 45					#$a2 --> size of bins_line
+	li $v0, 15					#write on file
+	syscall
+
+##################################################################################################################################
+	
+	li $t2, 48				#$t2 is a bin index initialized to  $t2 -> 0 (ASCII)
+	la $t5, bins_list		#$t5 is bins pointer in 2D Array
+	
+bins_loop:
+
+	move $t4, $t5				#$t4 is items pointer in 2D Array
+	sw $t2, bins_index			#store $t2 into memory
+
+	move $a0, $s3				#print bin_prefix on file
+	la $a1, bin_prefix			#load bin_prefix address onto $a1
+	li $a2, 7					#$a2 --> size of bin_prefix
+	li $v0, 15					
+	syscall
+
+	move $a0, $s3				#print bins_index on file
+	la $a1, bins_index			#load bins_index address onto $a1
+	li $a2, 2					#$a2 --> size of bins_index
+	li $v0, 15					
+	syscall
+
+items_loop:
+	
+	lw $t6, 0($t4)				#$t6 address of item in bins_list
+	add $t6, $t6, 48			#convert integer to string
+	sw $t6, ascii_item_index	#store it in memory
+	
+	move $a0, $s3				#print item_format_part1 on file
+	la $a1, item_format_part1	#load item_format_part1 address onto $a1
+	li $a2, 12					#$a2 --> size of item_format_part1
+	li $v0, 15					
+	syscall
+
+	move $a0, $s3				#print ascii_item_index on file
+	la $a1, ascii_item_index	#load ascii_item_index address onto $a1
+	li $a2, 2					#$a2 --> size of ascii_item_index
+	li $v0, 15					
+	syscall
+
+	move $a0, $s3				#print item_format_part2 on file
+	la $a1, item_format_part2	#load item_format_part2 address onto $a1
+	li $a2, 10					#$a2 --> size of item_format_part2
+	li $v0, 15					
+	syscall
+
+	move $a0, $s3				#print item_format_end on file
+	la $a1, item_format_end		#load item_format_end address onto $a1
+	li $a2, 3					#$a2 --> size of item_format_end
+	li $v0, 15					
 	syscall
 	
-	move $a0, $s3
-	la $a1, bins_line
-	li $a2, 45
+	addi $t4, $t4, 4			#move to the next item in same bin
+	lw $t6, 0($t4)				#$t6 --> address of current item
+	bne $t6, 0, items_loop		#if we didn't reach the end, repeat
+
+	subi $t1, $t1, 1			#decrease bin counter to break the loop
+	addi $t2, $t2, 1			#bin index counter
+	addi $t5, $t5, 400			#move to the next bin
+
+	bnez $t1, bins_loop			#repeat until counter reaches 0
+
+##################################################################################################################################
+
+	move $a0, $s3				#print bins_line on file
+	la $a1, bins_line			#load bins_line address onto $a1
+	li $a2, 48					#$a2 --> size of bins_line
 	li $v0, 15
 	syscall
 
-	move $a0, $s3
-	la $a1, end_msg
-	li $a2, 26
+	move $a0, $s3				#print end_msg on file
+	la $a1, end_msg				#load end_msg address onto $a1
+	li $a2, 33					#$a2 --> size of end_msg
 	li $v0, 15
 	syscall
 
-
-	
 	j quit
