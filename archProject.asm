@@ -37,23 +37,24 @@
 	bins_count:			.space 64
 	bins_index:			.space 64
 	ascii_item_index:	.space 64
-
+	
+	int_buffer: 		.space 12      # max 10 digits + null terminator
 	
 	
 
 	#Read from user
-	file_path: .space 100		#100 bytes for file_path
-	buffer: .space 1024  		#1024 for file content
+	file_path: 	.space 100		#100 bytes for file_path
+	buffer: 	.space 1024  	#1024 for file content
 	
 	#Constants
 	one_float: .float 1.0
 	
 	#Arrays
 	.align 2
-	items_list: .space 1024 		#array of items
+	items_list: 	.space 1024 	#array of items
 	bins_size_list: .space 1024 	#array of bins (holds bins size)
 
-	bins_list: .space 40000  		#2D array of bins (holds items indices for each bin) 
+	bins_list: 		.space 40000  	#2D array of bins (holds items indices for each bin) 
 									#offset = (row * 100 + col) * 4 
 									#100 x 100 x 4 bytes = 40,000 bytes
 	
@@ -365,13 +366,13 @@ write_on_file:
 	li $v0, 15					
 	syscall
 	
-	move $t1, $s4				#now $t1 holds count of bins
-
-	addi $s4, $s4, 48			#convert count of bins from integer to ASCII (+48)
-	sw $s4, bins_count			#store it in memory
+	move $a0,$s4
+	move $t1,$s4
+	jal  int_to_string     		# call the function	
 	
+
 	move $a0, $s3				#print bins_count on file
-	la $a1, bins_count			#load bins_count address onto $a1
+	la $a1, 0($v0)			#load bins_count address onto $a1
 	li $a2, 2					#$a2 --> size of bins_count
 	li $v0, 15					#write on file
 	syscall
@@ -384,40 +385,45 @@ write_on_file:
 
 ##################################################################################################################################
 	
-	li $t2, 48				#$t2 is a bin index initialized to  $t2 -> 0 (ASCII)
+	li $t2, 0				#$t2 is a bin index initialized to  $t2 -> 0 (ASCII)
 	la $t5, bins_list		#$t5 is bins pointer in 2D Array
 	
 bins_loop:
 
 	move $t4, $t5				#$t4 is items pointer in 2D Array
-	sw $t2, bins_index			#store $t2 into memory
+
 
 	move $a0, $s3				#print bin_prefix on file
 	la $a1, bin_prefix			#load bin_prefix address onto $a1
 	li $a2, 7					#$a2 --> size of bin_prefix
 	li $v0, 15					
 	syscall
+	
+		
+	move $a0,$t2
+	jal  int_to_string     		# call the function	
 
 	move $a0, $s3				#print bins_index on file
-	la $a1, bins_index			#load bins_index address onto $a1
+	la $a1, 0($v0)			#load bins_index address onto $a1
 	li $a2, 2					#$a2 --> size of bins_index
 	li $v0, 15					
 	syscall
 
 items_loop:
-	
-	lw $t6, 0($t4)				#$t6 address of item in bins_list
-	add $t6, $t6, 48			#convert integer to string
-	sw $t6, ascii_item_index	#store it in memory
-	
+			
 	move $a0, $s3				#print item_format_part1 on file
 	la $a1, item_format_part1	#load item_format_part1 address onto $a1
 	li $a2, 12					#$a2 --> size of item_format_part1
 	li $v0, 15					
 	syscall
+	
+								#convert integer to string
+	lw $t6, 0($t4)				#$t6 address of item in bins_list
+	move $a0,$t6
+	jal  int_to_string     		# call the function	
 
 	move $a0, $s3				#print ascii_item_index on file
-	la $a1, ascii_item_index	#load ascii_item_index address onto $a1
+	la $a1, 0($v0)				#load ascii_item_index address onto $a1
 	li $a2, 2					#$a2 --> size of ascii_item_index
 	li $v0, 15					
 	syscall
@@ -459,3 +465,53 @@ items_loop:
 	syscall
 
 	j quit
+
+int_to_string:
+    li     $t0, 10                 # divisor = 10
+    la     $v0, int_buffer         # $v0 = start of buffer
+    addiu  $v1, $v0, 11            # $v1 = end of buffer
+    sb     $zero, 0($v1)           # place null terminator
+
+    move   $t8, $a0                # move the input number to $t2
+
+itoa_loop:
+    divu   $t8, $t0                # divide $t2 / 10
+    mflo   $t8                     # quotient -> $t2
+    mfhi   $t7                     # remainder (digit)
+    addiu  $t7, $t7, 48            # convert digit to ASCII
+    addiu  $v1, $v1, -1            # move pointer back
+    sb     $t7, 0($v1)             # store character
+    bnez   $t8, itoa_loop          # loop if not zero
+
+    move $v0, $v1                  # return pointer to start of string
+    jr   $ra
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
