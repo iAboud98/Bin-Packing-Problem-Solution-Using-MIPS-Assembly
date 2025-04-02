@@ -222,7 +222,7 @@ error_file:   	#error opening file
 	syscall
 	j menu1					#branch back to menu1
 
-invalid_choice:			#invalid character choice
+invalid_choice:				#invalid character choice
 	la $a0, wrg_msg 		#load wrg_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
@@ -273,19 +273,22 @@ add_item:
 	sub $t4, $t0, $s0			#$t4 --> index of current item (multiple by 4)
 	divu $t4, $t4, 4			#divide $t4 by 4 to get the real index
 	addi $t4, $t4,1
+	
+	
+	sub $t5, $t1, $s1
+	divu $t5, $t5, 4			#divide $t5 by 4 to get the real index
+	
 	#add to bins_list
-	jal add_item_to_bin_list	
+	jal add_item_to_bin_list
 	
 	addi $t0, $t0, 4			#move to the next item 
 	
-	move $t1, $s1				#reset to the first bin 
+	move $t1, $s1				#reset to the first bin
+	
 	
 	j check_bin
 
 create_bin:
-	
-	sub $t5, $t1, $s1			#$t5 --> index of current item (multiple by 4)
-	divu $t5, $t5, 4			#divide $t5 by 4 to get the real index
 	
 	l.s $f6, one_float    		#This loads 1.0 into $f0
     swc1 $f6, 0($t1)      		#Store $f0 into memory at address in $t1 (the new bin)
@@ -299,7 +302,7 @@ add_item_to_bin_list:
 	#get the address of the bin index
 	mul $t7, $t5, 100			
 	mul $t7, $t7, 4  
-	add $t2, $s2,$t7
+	add $t2, $s2, $t7
 
 	#get the address of empty column
 find_index:
@@ -485,33 +488,3 @@ itoa_loop:
 
     move $v0, $v1                  # return pointer to start of string
     jr   $ra
-		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
