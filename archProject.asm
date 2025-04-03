@@ -4,18 +4,18 @@
 ###################################################### data #############################################################################
 .data
     # Print on screen
-    wlc_msg:   .asciiz 	"Welcome to Aboud and Fadi's Program\n"
-    menu1_msg: .asciiz 	"\nA - Read input file\nQ/q - Quit\n"
-    choice_msg:.asciiz 	"\nChoose an operation: "
-    infile_msg:.asciiz 	"\nEnter input file path (e.g., input.txt or C:\\Users\\YourName\\Documents\\input.txt): "
-    q_msg:     .asciiz 	"\nThank you for using our program!\n"
-    inv_msg:   .asciiz 	"\nError opening the file. Please check if the path is correct.\n"
-    menu2_msg: .asciiz 	"\nF - First Fit\nB - Best Fit\nQ/q - Quit\n"
-    menu3_msg: .asciiz 	"\nP - Print result to output file\nQ/q - Quit\n"
-    res_msg:   .asciiz 	"\nDone! Results saved in the output file.\n"
-	wrg_msg:   .asciiz 	"\nwrong input!"
-	first_msg: .asciiz 	"\nWelcome to first fit algorithms"
-	best_msg: .asciiz 	"\nWelcome to best fit algorithms"
+    wlc_msg:   	.asciiz 	"Welcome to Aboud and Fadi's Program\n"
+    menu1_msg: 	.asciiz 	"\nA - Read input file\nQ/q - Quit\n"
+    choice_msg:	.asciiz 	"\nChoose an operation: "
+    infile_msg:	.asciiz 	"\nEnter input file path (e.g., input.txt or C:\\Users\\YourName\\Documents\\input.txt): "
+    q_msg:     	.asciiz 	"\nThank you for using our program!\n"
+    inv_msg:   	.asciiz 	"\nError opening the file. Please check if the path is correct.\n"
+    menu2_msg: 	.asciiz 	"\nF - First Fit\nB - Best Fit\nQ/q - Quit\n"
+    menu3_msg: 	.asciiz 	"\nP - Print result to output file\nQ/q - Quit\n"
+    res_msg:   	.asciiz 	"\nDone! Results saved in the output file.\n"
+	wrg_msg:   	.asciiz 	"\nwrong input!"
+	first_msg: 	.asciiz 	"\nWelcome to first fit algorithms"
+	best_msg: 	.asciiz 	"\nWelcome to best fit algorithms"
 	
 	#Output File
 	out_filename:      	.asciiz "output.txt"
@@ -29,15 +29,16 @@
 	bins_line:  		.ascii "\n____________________________________________"
 	bin_prefix:        	.ascii "\n\n Bin "
 	item_format_part1: 	.ascii "\n   | Item #"
-	item_format_part2: 	.ascii " | Size = "
-	item_format_end:   	.ascii " |\n"
+	item_format_part2: 	.ascii "\n   | Size = "
+	line_between_items: .ascii "\n-----------------"
 	end_msg:           	.ascii "\nPacking Completed Successfully!\n"
 
+	
 	.align 2
 	bins_count:			.space 64
 	bins_index:			.space 64
 	ascii_item_index:	.space 64
-	
+	ascii_item_size:    .space 64
 	int_buffer: 		.space 12      # max 10 digits + null terminator
 	
 	
@@ -407,7 +408,7 @@ bins_loop:
 	jal  int_to_string     		# call the function	
 
 	move $a0, $s3				#print bins_index on file
-	la $a1, 0($v0)			#load bins_index address onto $a1
+	la $a1, 0($v0)				#load bins_index address onto $a1
 	li $a2, 2					#$a2 --> size of bins_index
 	li $v0, 15					
 	syscall
@@ -421,9 +422,9 @@ items_loop:
 	syscall
 	
 								#convert integer to string
-	lw $t6, 0($t4)				#$t6 address of item in bins_list
-	move $a0,$t6
-	jal  int_to_string     		# call the function	
+	lw $t6, 0($t4)				#$t6 address of item in bins_list, 
+	move $a0, $t6
+	jal  int_to_string     		#call the function	
 
 	move $a0, $s3				#print ascii_item_index on file
 	la $a1, 0($v0)				#load ascii_item_index address onto $a1
@@ -432,14 +433,29 @@ items_loop:
 	syscall
 
 	move $a0, $s3				#print item_format_part2 on file
-	la $a1, item_format_part2	#load item_format_part2 address onto $a1
-	li $a2, 10					#$a2 --> size of item_format_part2
+	la $a1,	item_format_part2			#load item_format_part2 address onto $a1
+	li $a2, 13				#$a2 --> size of item_format_part2
 	li $v0, 15					
 	syscall
-
-	move $a0, $s3				#print item_format_end on file
-	la $a1, item_format_end		#load item_format_end address onto $a1
-	li $a2, 3					#$a2 --> size of item_format_end
+	
+	###########
+	#la $t9, items_list
+	#subi $t6, $t6, 1
+	#mul $t6, $t6, 4
+	#add $t9, $t9, $t6
+	#l.s $f8, 0($t9)
+	#jal float_to_string
+	
+	#move $a0, $s3				#print ascii_item_size on file
+	#la $a1, 0($v0)				#load ascii_item_size address onto $a1
+	#li $a2, 64					#$a2 --> size of ascii_item_index
+	#li $v0, 15					
+	#syscall
+	###########
+	
+	move $a0, $s3						#print item_format_part2 on file
+	la $a1,	line_between_items			#load item_format_part2 address onto $a1
+	li $a2, 18							#$a2 --> size of item_format_part2
 	li $v0, 15					
 	syscall
 	
@@ -488,3 +504,7 @@ itoa_loop:
 
     move $v0, $v1                  # return pointer to start of string
     jr   $ra
+
+float_to_string:
+
+	
