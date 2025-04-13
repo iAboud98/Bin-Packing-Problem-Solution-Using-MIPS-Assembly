@@ -32,6 +32,7 @@
 	item_format_part2: 	.ascii "\n   | Size = "
 	line_between_items: .ascii "\n-----------------"
 	end_msg:           	.ascii "\nPacking Completed Successfully!\n"
+	zero_point:			.ascii "0."
 
 	
 	.align 2
@@ -48,7 +49,8 @@
 	buffer: 	.space 1024  	#1024 for file content
 	
 	#Constants
-	one_float: .float 1.0
+	one_float: 		.float 1.0
+	one_hundred: 	.float 100.0
 	
 	#Arrays
 	.align 2
@@ -404,7 +406,7 @@ bins_loop:
 	syscall
 	
 		
-	move $a0,$t2
+	move $a0, $t2
 	jal  int_to_string     		# call the function	
 
 	move $a0, $s3				#print bins_index on file
@@ -422,7 +424,7 @@ items_loop:
 	syscall
 	
 								#convert integer to string
-	lw $t6, 0($t4)				#$t6 address of item in bins_list, 
+	lw $t6, 0($t4)				#$t6 address of item in bins_list 
 	move $a0, $t6
 	jal  int_to_string     		#call the function	
 
@@ -432,26 +434,36 @@ items_loop:
 	li $v0, 15					
 	syscall
 
-	move $a0, $s3				#print item_format_part2 on file
+	move $a0, $s3						#print item_format_part2 on file
 	la $a1,	item_format_part2			#load item_format_part2 address onto $a1
-	li $a2, 13				#$a2 --> size of item_format_part2
+	li $a2, 13							#$a2 --> size of item_format_part2
 	li $v0, 15					
 	syscall
 	
-	###########
-	#la $t9, items_list
-	#subi $t6, $t6, 1
-	#mul $t6, $t6, 4
-	#add $t9, $t9, $t6
-	#l.s $f8, 0($t9)
-	#jal float_to_string
+	move $a0, $s3
+	la $a1, zero_point
+	li $a2, 2
+	li $v0, 15
+	syscall
 	
-	#move $a0, $s3				#print ascii_item_size on file
-	#la $a1, 0($v0)				#load ascii_item_size address onto $a1
-	#li $a2, 64					#$a2 --> size of ascii_item_index
-	#li $v0, 15					
-	#syscall
-	###########
+   	#Handle error in input file
+	#Don't reset when input is wrong
+
+	la $t9, items_list
+	subi $t6, $t6, 1
+	mul $t6, $t6, 4
+	add $t9, $t9, $t6
+	l.s $f8, 0($t9)
+	j float_to_string
+
+print_item_size:
+	#print ascii_item_size on file
+	move $a0, $s3				#$s3 contains the address of output file (where to write)
+	la $a1, 0($v0)				#load ascii_item_size address onto $a1
+	li $a2, 64					#$a2 --> size of ascii_item_index
+	li $v0, 15					
+	syscall
+	#####################
 	
 	move $a0, $s3						#print item_format_part2 on file
 	la $a1,	line_between_items			#load item_format_part2 address onto $a1
@@ -506,5 +518,11 @@ itoa_loop:
     jr   $ra
 
 float_to_string:
-
+	lwc1 $f12, one_hundred      	# $f12 = 100.0
+	mul.s $f8, $f8, $f12        	# $f8 = 0.788123 * 100 = 78.8123
+	cvt.w.s $f8, $f8            	# $f8 = truncate(78.8123) = 78
+	mfc1 $a0, $f8               	# $t5 = 78
+	#move $a0, $t5
+	jal int_to_string
+	j print_item_size
 	
