@@ -18,7 +18,7 @@
 	best_msg: 	.asciiz 	"\nWelcome to best fit algorithms"
 	
 	#Output File
-	out_filename:      	.asciiz "output.txt"
+	out_filename:      	.asciiz "Output.txt"
 	header_line1:      	.ascii "============================================\n"
 	header_title:      	.ascii "        Bin Packing Results Report         \n"
 	header_line2:      	.ascii "===========================================\n\n"
@@ -230,7 +230,7 @@ invalid_choice:				#invalid character choice
 	li $v0, 4 				#4 --> Print String
 	syscall
 	j menu1
-	
+##########################################################################################	
 first_fit:
 	la $a0, first_msg
 	li $v0, 4
@@ -316,7 +316,7 @@ find_index:
 found_index:
 	sb $t4, 0($t2)				#store the index of item in bin_list
  	jr $ra 						#return
-
+##########################################################################################
 best_fit:
 	la $a0, best_msg
 	li $v0, 4
@@ -324,8 +324,108 @@ best_fit:
 
 	la $s5, BF
 
-	j menu3
+	la $t0, items_list			#$t0 --> items_list pointer
+	la $t1, bins_size_list		#$t1 --> bins_size_list pointer
+	li $s4, 1                 	#$t3 --> bins counter
+	li $t4, 1					#$t4 --> current index of items
+	li $t5, 0					#$t5 --> current index of bins
 
+	l.s $f4, one_float			#min compare
+	move $t3, $t1				#$t3 --> min item index of bins
+	
+	move $s0, $t0				#$s0 --> address of first item index
+	move $s1, $t1				#$s1 --> address of first bin index
+	la $s2, bins_list			#$s2 --> bins_list pointer
+	
+	l.s $f6, one_float    		#This loads 1.0 into $f0
+    swc1 $f6, 0($t1)      		#Store $f6 into memory at address in $t1
+    					
+
+check_bin_bf:
+	
+	lw $t8, 0($t0)				#Check end of file
+	beq $t8, 0, menu3			#branch to MENU3
+	
+    lwc1 $f0, 0($t0)			#load item size into $f0
+    lwc1 $f2, 0($t1)			#load bin size into $f2
+	
+
+	c.lt.s $f0,$f2
+	bc1f	move_to_next_bin
+    sub.s $f1,$f2,$f0
+	c.lt.s $f1, $f4
+	bc1f	move_to_next_bin
+	mov.s	$f4,$f1
+	move $t3,$t1
+	
+move_to_next_bin:
+    addi $t1, $t1, 4			#move to the next bin
+    lw $t7, 0($t1)				
+    beq $t7, 0,	check_min		#check min if $t7 == '/0'
+	j check_bin_bf
+
+check_min:
+	lwc1 $f3,one_float
+
+	c.eq.s  $f4, $f3
+	bc1t	create_bin_bf
+
+ 	j add_item_bf
+ 
+    	
+add_item_bf:
+	
+	sub.s $f2, $f2, $f0  		#$f2 = $f2 - $f0
+	swc1 $f2, 0($t3)
+	
+	sub $t4, $t0, $s0			#$t4 --> index of current item (multiple by 4)
+	divu $t4, $t4, 4			#divide $t4 by 4 to get the real index
+	addi $t4, $t4,1
+	
+	
+	sub $t5, $t3, $s1
+	divu $t5, $t5, 4			#divide $t5 by 4 to get the real index
+	
+	#add to bins_list
+	jal add_item_to_bin_list_bf
+	
+	addi $t0, $t0, 4			#move to the next item 
+	
+	move $t1, $s1				#reset to the first bin
+	
+	
+	j check_bin_bf
+
+create_bin_bf:
+	
+	l.s $f6, one_float    		#This loads 1.0 into $f0
+    swc1 $f6, 0($t1)      		#Store $f0 into memory at address in $t1 (the new bin)
+
+	addi $s4, $s4, 1			#increament bins counter by 1
+	
+	j check_bin_bf
+
+add_item_to_bin_list_bf:
+	#get offset equation
+	#get the address of the bin index
+	mul $t7, $t5, 100			
+	mul $t7, $t7, 4  
+	add $t2, $s2, $t7
+
+	#get the address of empty column
+find_index_bf:
+	lb $t9, 0($t2)				
+	beq $t9, 0, found_index_bf		#check if index is empty
+	add $t2, $t2, 4				#if not empty move to next index
+	j find_index_bf
+found_index_bf:
+	sb $t4, 0($t2)				#store the index of item in bin_list
+ 	jr $ra 						#return
+
+	
+
+	j menu3
+################################################################################
 write_on_file:
 	
 	la $a0, out_filename		#open file
@@ -522,7 +622,6 @@ float_to_string:
 	mul.s $f8, $f8, $f12        	# $f8 = 0.788123 * 100 = 78.8123
 	cvt.w.s $f8, $f8            	# $f8 = truncate(78.8123) = 78
 	mfc1 $a0, $f8               	# $t5 = 78
-	#move $a0, $t5
 	jal int_to_string
 	j print_item_size
 	
