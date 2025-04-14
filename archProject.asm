@@ -374,6 +374,8 @@ check_min:
  
     	
 add_item_bf:
+
+	
 	
 	sub.s $f2, $f2, $f0  		#$f2 = $f2 - $f0
 	swc1 $f2, 0($t3)
@@ -392,7 +394,8 @@ add_item_bf:
 	addi $t0, $t0, 4			#move to the next item 
 	
 	move $t1, $s1				#reset to the first bin
-	
+	l.s $f4, one_float			#min compare
+	move $t3, $t1				#$t3 --> min item index of bins
 	
 	j check_bin_bf
 
