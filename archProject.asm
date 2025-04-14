@@ -18,7 +18,7 @@
 	best_msg: 	.asciiz 	"\nWelcome to best fit algorithms"
 	
 	#Output File
-	out_filename:      	.asciiz "Output.txt"
+	out_filename:      	.asciiz "output.txt"
 	header_line1:      	.ascii "============================================\n"
 	header_title:      	.ascii "        Bin Packing Results Report         \n"
 	header_line2:      	.ascii "===========================================\n\n"
@@ -27,7 +27,9 @@
 	BF:					.ascii "Best Fit \n"
 	bins_label:			.ascii ">> Minimum Number of Required Bins	: "
 	bins_line:  		.ascii "\n____________________________________________"
-	bin_prefix:        	.ascii "\n\n Bin "
+	bin_prefix:        	.ascii "\n\n Bin ("
+	bin_capacity_start:	.ascii ") -> Used Capacity [ "
+	bin_capacity_end:	.ascii " / 1.0 ]"
 	item_format_part1: 	.ascii "\n   | Item #"
 	item_format_part2: 	.ascii "\n   | Size = "
 	line_between_items: .ascii "\n-----------------"
@@ -496,6 +498,7 @@ write_on_file:
 	
 	li $t2, 0				#$t2 is a bin index initialized to  $t2 -> 0 (ASCII)
 	la $t5, bins_list		#$t5 is bins pointer in 2D Array
+
 	
 bins_loop:
 
@@ -504,7 +507,7 @@ bins_loop:
 
 	move $a0, $s3				#print bin_prefix on file
 	la $a1, bin_prefix			#load bin_prefix address onto $a1
-	li $a2, 7					#$a2 --> size of bin_prefix
+	li $a2, 8					#$a2 --> size of bin_prefix
 	li $v0, 15					
 	syscall
 	
@@ -514,9 +517,27 @@ bins_loop:
 
 	move $a0, $s3				#print bins_index on file
 	la $a1, 0($v0)				#load bins_index address onto $a1
-	li $a2, 2					#$a2 --> size of bins_index
+	li $a2, 1					#$a2 --> size of bins_index
 	li $v0, 15					
 	syscall
+	
+	move $a0, $s3				#print item_format_part1 on file
+	la $a1, bin_capacity_start	#load item_format_part1 address onto $a1
+	li $a2, 21					#$a2 --> size of item_format_part1
+	li $v0, 15					
+	syscall
+	
+	#li $t3, 4
+	#mul $t3, $t3, $t2
+	#addi $t3, $t3, $s1
+	
+	# now $t3 holds the address of current bin
+	
+	#l.s $f8, 0($t3)
+	#li $s7, 1			# if $s7 != 0 -> bin size (flag)
+	#j float_to_string
+	
+	
 
 items_loop:
 			
@@ -627,4 +648,3 @@ float_to_string:
 	mfc1 $a0, $f8               	# $t5 = 78
 	jal int_to_string
 	j print_item_size
-	
