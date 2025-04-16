@@ -30,7 +30,7 @@
 	bin_prefix:        	.ascii "\n\n Bin ("
 	bin_postfix:		.ascii ") :\n\n-----------------"
 	bin_capacity_start:	.ascii "\n\n-> Used Capacity : "
-	line_between_bins:	.ascii "\n==============================="
+	line_between_bins:	.ascii "\n\n==============================="
 	bin_capacity_end:	.ascii " / 1.0 ]"
 	item_format_part1: 	.ascii "\n   | Item #"
 	item_format_part2: 	.ascii "\n   | Size = "
@@ -534,6 +534,8 @@ bins_loop:
 	
 
 items_loop:
+	
+	li $s7, 0					#flag
 			
 	move $a0, $s3				#print item_format_part1 on file
 	la $a1, item_format_part1	#load item_format_part1 address onto $a1
@@ -572,6 +574,7 @@ items_loop:
 	mul $t6, $t6, 4
 	add $t9, $t9, $t6
 	l.s $f8, 0($t9)
+	add.s $f20, $f20, $f8
 	j float_to_string
 
 print_item_size:
@@ -595,13 +598,33 @@ print_item_size:
 	
 	move $a0, $s3				#print item_format_part1 on file
 	la $a1, bin_capacity_start	#load item_format_part1 address onto $a1
-	li $a2, 22					#$a2 --> size of item_format_part1
+	li $a2, 21					#$a2 --> size of item_format_part1
 	li $v0, 15					
 	syscall
 	
+	move $a0, $s3
+	la $a1, zero_point
+	li $a2, 2
+	li $v0, 15
+	syscall
+	
+	li $s7, 1
+	mov.s $f8, $f20
+	j float_to_string
+
+	
+print_bin_capacity:
+
+	move $a0, $s3				#$s3 contains the address of output file (where to write)
+	la $a1, 0($v0)				#load ascii_item_size address onto $a1
+	li $a2, 64					#$a2 --> size of ascii_item_index
+	li $v0, 15					
+	syscall
+	
+	
 	move $a0, $s3				#print item_format_part1 on file
 	la $a1, line_between_bins	#load item_format_part1 address onto $a1
-	li $a2, 32					#$a2 --> size of item_format_part1
+	li $a2, 33					#$a2 --> size of item_format_part1
 	li $v0, 15					
 	syscall
 
@@ -654,4 +677,6 @@ float_to_string:
 	cvt.w.s $f8, $f8            	# $f8 = truncate(78.8123) = 78
 	mfc1 $a0, $f8               	# $t5 = 78
 	jal int_to_string
-	j print_item_size
+	
+	beqz $s7, print_item_size
+	j print_bin_capacity
