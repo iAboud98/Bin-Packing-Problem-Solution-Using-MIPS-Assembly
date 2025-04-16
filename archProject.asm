@@ -28,7 +28,9 @@
 	bins_label:			.ascii ">> Minimum Number of Required Bins	: "
 	bins_line:  		.ascii "\n____________________________________________"
 	bin_prefix:        	.ascii "\n\n Bin ("
-	bin_capacity_start:	.ascii ") -> Used Capacity [ "
+	bin_postfix:		.ascii ") :\n\n-----------------"
+	bin_capacity_start:	.ascii "\n\n-> Used Capacity : "
+	line_between_bins:	.ascii "\n==============================="
 	bin_capacity_end:	.ascii " / 1.0 ]"
 	item_format_part1: 	.ascii "\n   | Item #"
 	item_format_part2: 	.ascii "\n   | Size = "
@@ -51,6 +53,7 @@
 	buffer: 	.space 1024  	#1024 for file content
 	
 	#Constants
+	zero_float:		.float 0
 	one_float: 		.float 1.0
 	one_hundred: 	.float 100.0
 	
@@ -502,6 +505,8 @@ write_on_file:
 	
 bins_loop:
 
+	
+	l.s $f20, zero_float
 	move $t4, $t5				#$t4 is items pointer in 2D Array
 
 
@@ -522,21 +527,10 @@ bins_loop:
 	syscall
 	
 	move $a0, $s3				#print item_format_part1 on file
-	la $a1, bin_capacity_start	#load item_format_part1 address onto $a1
-	li $a2, 21					#$a2 --> size of item_format_part1
+	la $a1, bin_postfix			#load item_format_part1 address onto $a1
+	li $a2, 22					#$a2 --> size of item_format_part1
 	li $v0, 15					
 	syscall
-	
-	#li $t3, 4
-	#mul $t3, $t3, $t2
-	#addi $t3, $t3, $s1
-	
-	# now $t3 holds the address of current bin
-	
-	#l.s $f8, 0($t3)
-	#li $s7, 1			# if $s7 != 0 -> bin size (flag)
-	#j float_to_string
-	
 	
 
 items_loop:
@@ -598,10 +592,23 @@ print_item_size:
 	addi $t4, $t4, 4			#move to the next item in same bin
 	lw $t6, 0($t4)				#$t6 --> address of current item
 	bne $t6, 0, items_loop		#if we didn't reach the end, repeat
+	
+	move $a0, $s3				#print item_format_part1 on file
+	la $a1, bin_capacity_start	#load item_format_part1 address onto $a1
+	li $a2, 22					#$a2 --> size of item_format_part1
+	li $v0, 15					
+	syscall
+	
+	move $a0, $s3				#print item_format_part1 on file
+	la $a1, line_between_bins	#load item_format_part1 address onto $a1
+	li $a2, 32					#$a2 --> size of item_format_part1
+	li $v0, 15					
+	syscall
 
 	subi $t1, $t1, 1			#decrease bin counter to break the loop
 	addi $t2, $t2, 1			#bin index counter
 	addi $t5, $t5, 400			#move to the next bin
+	
 
 	bnez $t1, bins_loop			#repeat until counter reaches 0
 
