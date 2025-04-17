@@ -13,9 +13,8 @@
     menu2_msg: 	.asciiz 	"\nF - First Fit\nB - Best Fit\nQ/q - Quit\n"
     menu3_msg: 	.asciiz 	"\nP - Print result to output file\nQ/q - Quit\n"
     res_msg:   	.asciiz 	"\nDone! Results saved in the output file.\n"
-	wrg_msg:   	.asciiz 	"\nwrong input!"
-	first_msg: 	.asciiz 	"\nWelcome to first fit algorithms"
-	best_msg: 	.asciiz 	"\nWelcome to best fit algorithms"
+	wrg_msg:   	.asciiz 	"\n\n!!! Wrong input !!!\n"
+	end_msg:    .asciiz		"\nPacking Completed Successfully!\n"
 	
 	#Output File
 	out_filename:      	.asciiz "output.txt"
@@ -35,7 +34,6 @@
 	item_format_part1: 	.ascii "\n   | Item #"
 	item_format_part2: 	.ascii "\n   | Size = "
 	line_between_items: .ascii "\n-----------------"
-	end_msg:           	.ascii "\nPacking Completed Successfully!\n"
 	zero_point:			.ascii "0."
 
 	
@@ -71,36 +69,38 @@
 .globl main
 
 main:
-	la $a0,wlc_msg 			#load wlc_msg address to $a0 
+	la $a0, wlc_msg 			#load wlc_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
 menu1:
-	la $a0,menu1_msg 		#load menu1_msg address to $a0 
+	la $a0, menu1_msg 		#load menu1_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
 
-	la $a0,choice_msg 		#load choice_msg address to $a0 
+	la $a0, choice_msg 		#load choice_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
 
 	li $v0, 12				#12 --> Read Char
 	syscall 
 	
-	move $t0, $v0   			#move char in $v0 to $t0	
+	
+	move $t0, $v0   			#move char in $v0 to $t0
 	ori $t0,$t0,0x20 			#converte to small letter(0x20 = 32)
 	beq $t0,'q', quit			#compare between user input and 'q'
 	beq $t0,'a', input_file  	# compare between user input and 'a'
-	j invalid_choice			#jump to invalid choice label
 	
-quit:	 
-	la $a0, q_msg 			#load q_msg address to $a0 
+	
+	
+	la $a0, wrg_msg 		#load wrg_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
 	
-	li $v0, 10				#Exit program
-	syscall
+	j menu1
+	
 
 input_file:
+	
 	la $a0, infile_msg 		#load infile_msg address to $a0 
 	li $v0, 4 				#4 --> Print String
 	syscall
@@ -111,6 +111,7 @@ input_file:
 	syscall
 	
 	la $t0, file_path				#load file_path address to $t0
+	
 get_newline_index:					#label to get the index of '/n'
 	lb $t1, 0($t0)					#load the char placed in address $t0 (first index of it) 
 	beq $t1, 0xA remove_newline		#compare the value of $t1 with '/n'
@@ -202,7 +203,12 @@ menu2:							#menu to choose algorithms
 	beq $t0, 'f', first_fit		#compare between user input and 'f'
 	beq $t0, 'b', best_fit		#compare between user input and 'b'
 	beq $t0, 'q', quit			#compare between user input and 'q'
-	j invalid_choice			#jump to invalid choice label 
+	
+	la $a0, wrg_msg 		#load wrg_msg address to $a0 
+	li $v0, 4 				#4 --> Print String
+	syscall
+	
+	j menu2 
 
 menu3:
 	la $a0,menu3_msg 		#load menu3_msg address to $a0 
@@ -220,7 +226,12 @@ menu3:
 	ori $t0,$t0,0x20 			#converte to small letter(0x20 = 32)
 	beq $t0,'q', quit			#compare between user input and 'q'
 	beq $t0,'p', write_on_file  # compare between user input and 'p'
-	j invalid_choice			#jump to invalid choice label
+	
+	la $a0, wrg_msg 		#load wrg_msg address to $a0 
+	li $v0, 4 				#4 --> Print String
+	syscall
+	
+	j menu3
 	#ask about repeat everything or just menu3???????????????????
 	
 	
@@ -230,16 +241,8 @@ error_file:   	#error opening file
 	syscall
 	j menu1					#branch back to menu1
 
-invalid_choice:				#invalid character choice
-	la $a0, wrg_msg 		#load wrg_msg address to $a0 
-	li $v0, 4 				#4 --> Print String
-	syscall
-	j menu1
 ##########################################################################################	
 first_fit:
-	la $a0, first_msg
-	li $v0, 4
-	syscall
 	
 	la $s5, FF	
 
@@ -323,9 +326,6 @@ found_index:
  	jr $ra 						#return
 ##########################################################################################
 best_fit:
-	la $a0, best_msg
-	li $v0, 4
-	syscall
 
 	la $s5, BF
 
@@ -643,12 +643,10 @@ print_bin_capacity:
 	li $v0, 15
 	syscall
 
-	move $a0, $s3				#print end_msg on file
-	la $a1, end_msg				#load end_msg address onto $a1
-	li $a2, 33					#$a2 --> size of end_msg
-	li $v0, 15
+	la $a0, end_msg
+	li $v0, 4
 	syscall
-
+	
 	j quit
 
 int_to_string:
@@ -677,6 +675,13 @@ float_to_string:
 	cvt.w.s $f8, $f8            	# $f8 = truncate(78.8123) = 78
 	mfc1 $a0, $f8               	# $t5 = 78
 	jal int_to_string
-	
 	beqz $s7, print_item_size
 	j print_bin_capacity
+	
+quit:	 
+	la $a0, q_msg 			#load q_msg address to $a0 
+	li $v0, 4 				#4 --> Print String
+	syscall
+	
+	li $v0, 10				#Exit program
+	syscall
