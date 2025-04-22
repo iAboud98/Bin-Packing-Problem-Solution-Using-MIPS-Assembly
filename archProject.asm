@@ -15,6 +15,7 @@
     res_msg:   	.asciiz 	"\nDone! Results saved in the output file.\n"
 	wrg_msg:   	.asciiz 	"\n\n!!! Wrong input !!!\n"
 	end_msg:    .asciiz		"\nPacking Completed Successfully!\n"
+	error_msg: 	.asciiz		"\nwrong input in input file\n"
 	
 	#Output File
 	out_filename:      	.asciiz "output.txt"
@@ -122,18 +123,26 @@ remove_newline:
 	sb $zero, 0($t0)				#replace '/n' with '/0'
 	
 	#file_path address already in $a0
-	li $a1, 0					#0 --> read-only flag
-	li $v0, 13					#13 --> open file
-	syscall
+	 li $a1, 0               # Read-only mode
+    li $v0, 13              # Syscall: open file
+    syscall
+
+    bltz $v0, error_file    # If file descriptor < 0, go to error handling
+
+    move $s3, $v0           # Save file descriptor to $s3
+
+    # Read file
+    move $a0, $s3           # File descriptor
+    la $a1, buffer          # Buffer to read into
+    li $a2, 1024            # Max number of characters to read
+    li $v0, 14              # Syscall: read from file
+    syscall
+
+    # Close file after reading
+    move $a0, $s3           # File descriptor
+    li $v0, 16              # Syscall: close file
+    syscall
 	
-	bltz $v0, error_file		#branch to error_file if $v0 is negative
-	
-	move $a0, $v0 				#move file descriptor from $v0 to $a0
-	
-	la $a1, buffer				#load buffer address to $a1
-	li $a2, 1024				#load maximum number of characters to read to $a2
-	li $v0, 14					#14 --> Read File
-	syscall
 	la $t0, buffer				#load address to $t0
 	la $t8, items_list			#load address to $t8
 repeat:	
@@ -143,7 +152,10 @@ repeat:
 	
 	
 	lb $t1, 0($t0) 		#load the first byte (number) in ASCII
-	#handle error (possible!!!!!!!!!!!!!!!!!!!!!!!1)
+	li $t9,48
+	bne $t1,$t9, error_input		#check if the values in input file greater then 0.99
+	
+	
 	addi $t0, $t0, 2			#skip '.'
 	
 	
@@ -158,7 +170,12 @@ convert_to_int:
 	addi $t0, $t0, 1					#move to the next digit
 	addi $t4, $t4, 1					#accomulate counter (digit counter)
 	j convert_to_int					#repeat loop
-	
+
+ error_input:
+	la $a0, error_msg			#load error_msg address to $a0
+	li $v0, 4				#4 --> Print String
+	syscall
+	j quit					#branch back to menu1
 	
 convert_to_float:
     li $t7, 1        #initialize power accumulator (10^t4)
@@ -243,6 +260,7 @@ error_file:   	#error opening file
 
 ##########################################################################################	
 first_fit:
+	jal reset_bins         # <--- Add this line at the top
 	
 	la $s5, FF	
 
@@ -326,7 +344,7 @@ found_index:
  	jr $ra 						#return
 ##########################################################################################
 best_fit:
-
+	jal reset_bins
 	la $s5, BF
 
 	la $t0, items_list			#$t0 --> items_list pointer
@@ -431,10 +449,20 @@ found_index_bf:
  	jr $ra 						#return
 
 	
-
 	j menu3
 ################################################################################
 write_on_file:
+# === CLEAR FILE BY WRITING EMPTY STRING ===
+la $a0, out_filename   # file name
+li $a1, 9              # FLAG = 9 (write-only | create | truncate in MARS/SPIM)
+li $v0, 13             # syscall: open file
+syscall
+
+bltz $v0, error_file   # if open fails, go to error
+
+move $a0, $v0          # move fd to $a0 for closing
+li $v0, 16             # syscall: close file
+syscall
 	
 	la $a0, out_filename		#open file
 	la $a1, 1
@@ -566,9 +594,6 @@ items_loop:
 	li $v0, 15
 	syscall
 	
-   	#Handle error in input file
-	#Don't reset when input is wrong
-
 	la $t9, items_list
 	subi $t6, $t6, 1
 	mul $t6, $t6, 4
@@ -646,8 +671,18 @@ print_bin_capacity:
 	la $a0, end_msg
 	li $v0, 4
 	syscall
+
 	
-	j quit
+	
+	move $a0, $s3        # file descriptor (output file)
+    li $v0, 16           # syscall code to close file
+    syscall
+
+    la $a0, end_msg
+    li $v0, 4
+    syscall
+
+    j menu1
 
 int_to_string:
     li     $t0, 10                 # divisor = 10
@@ -677,6 +712,35 @@ float_to_string:
 	jal int_to_string
 	beqz $s7, print_item_size
 	j print_bin_capacity
+
+reset_bins:
+	# Clear bins_size_list
+	la $t0, bins_size_list
+	li $t1, 0
+clear_bins_sizes:
+	li $t2, 0
+	sw $t2, 0($t0)
+	addi $t0, $t0, 4
+	addi $t1, $t1, 1
+	li $t3, 100
+	blt $t1, $t3, clear_bins_sizes
+
+	# Clear bins_list (2D)
+	la $t0, bins_list
+	li $t1, 0
+clear_bins_2d:
+	li $t2, 0
+	sw $t2, 0($t0)
+	addi $t0, $t0, 4
+	addi $t1, $t1, 1
+	li $t3, 10000          # 100x100 = 10,000 entries
+	blt $t1, $t3, clear_bins_2d
+
+	# Reset bin counter
+	li $s4, 1              # bin count starts at 1 (1st bin exists)
+
+	jr $ra
+
 	
 quit:	 
 	la $a0, q_msg 			#load q_msg address to $a0 
