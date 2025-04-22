@@ -36,6 +36,7 @@
 	item_format_part2: 	.ascii "\n   | Size = "
 	line_between_items: .ascii "\n-----------------"
 	zero_point:			.ascii "0."
+	one_point:			.ascii "1.00"
 
 	
 	.align 2
@@ -627,13 +628,18 @@ print_item_size:
 	li $v0, 15					
 	syscall
 	
+	cvt.w.s $f30, $f20    
+	mfc1 $s6, $f30    
+	
+	bnez $s6, print_one
+	
 	move $a0, $s3
 	la $a1, zero_point
 	li $a2, 2
 	li $v0, 15
 	syscall
 	
-	li $s7, 1
+	li $s7, 1					#flag
 	mov.s $f8, $f20
 	j float_to_string
 
@@ -646,7 +652,7 @@ print_bin_capacity:
 	li $v0, 15					
 	syscall
 	
-	
+after_one:	
 	move $a0, $s3				#print item_format_part1 on file
 	la $a1, line_between_bins	#load item_format_part1 address onto $a1
 	li $a2, 33					#$a2 --> size of item_format_part1
@@ -741,6 +747,15 @@ clear_bins_2d:
 
 	jr $ra
 
+print_one:
+
+	move $a0, $s3
+	la $a1, one_point
+	li $a2, 4
+	li $v0, 15
+	syscall
+	
+	j after_one
 	
 quit:	 
 	la $a0, q_msg 			#load q_msg address to $a0 
