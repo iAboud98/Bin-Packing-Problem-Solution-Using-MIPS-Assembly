@@ -272,7 +272,10 @@ check_bin:
 	
     	lwc1 $f0, 0($t0)			#load item size into $f0
     	lwc1 $f2, 0($t1)			#load bin size into $f2
-	
+		
+		c.eq.s $f2, $f0              # compare to zero
+		bc1t skip_bin_ff             # if exactly 0.0, skip
+
     	c.le.s $f0, $f2     			#Compare if $f0 <= $f2 and make flag cc to 0
     	bc1t add_item      	 		#If true (cc = 0), branch to add_item
     
@@ -280,12 +283,16 @@ check_bin:
     	lw $t7, 0($t1)				
     	beq $t7, 0, create_bin			#create new bin if $t7 == '/0'
     	j check_bin
-    	
+skip_bin_ff:
+  addi $t1, $t1, 4
+  j check_bin  
+
+
 add_item:
 	
-	sub.s $f2, $f2, $f0  			#$f2 = $f2 - $f0
-	swc1 $f2, 0($t1)			#save $f2 value into bins_size_list
-	
+	lwc1 $f2, 0($t1)             # Reload correct bin capacity
+	sub.s $f2, $f2, $f0
+	swc1 $f2, 0($t1)
 	sub $t4, $t0, $s0			#$t4 --> index of current item (multiple by 4)
 	divu $t4, $t4, 4			#divide $t4 by 4 to get the real index
 	addi $t4, $t4, 1			#to make the index of item starts at 1 not 0
@@ -360,7 +367,8 @@ check_bin_bf:
 	
     	lwc1 $f0, 0($t0)			#load item size into $f0
     	lwc1 $f2, 0($t1)			#load bin size into $f2
-	
+		c.eq.s $f2, $f0              # compare to 0.0
+	bc1t move_to_next_bin        # skip full bins
 
 	c.lt.s $f0,$f2				#check if it fits in this bin (f0 < f2)
 	bc1f move_to_next_bin			#if not -> move to the next bin
@@ -372,7 +380,13 @@ check_bin_bf:
 	
 move_to_next_bin:
     	addi $t1, $t1, 4			#move to the next bin
-    	lw $t7, 0($t1)				
+		
+
+		sub $t7, $t1, $s1           # how far we've moved from start
+	li $t6, 400                 # 100 bins * 4 bytes each
+	bge $t7, $t6, check_min     # if out of bounds, jump to check_min
+
+	lw $t7, 0($t1)	
     	beq $t7, 0, check_min			#check min if $t7 == '/0'
 	j check_bin_bf
 
@@ -387,7 +401,8 @@ check_min:
     	
 add_item_bf:
 	
-	sub.s $f2, $f2, $f0  			#$f2 = $f2 - $f0
+	lwc1 $f2, 0($t3)
+	sub.s $f2, $f2, $f0
 	swc1 $f2, 0($t3)
 	
 	sub $t4, $t0, $s0			#$t4 --> index of current item (multiple by 4)
