@@ -20,12 +20,5 @@ This project implements a **Bin Packing Solver** in MIPS assembly language. It u
 
 ---
 
-## 📂 Files
-- `archProject.asm`: Main MIPS assembly program.  
-- `input.txt`: Sample input file (one item size per line, e.g., `0.5`).  
-- `output.txt`: Generated results file.
-
----
-
 ## 🚀 How to Run
 - **Assemble & Execute**  -> Using MARS Simulator
